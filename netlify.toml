@@ -1,0 +1,16 @@
+# Netlify: drag-and-drop this folder, or `netlify deploy --prod`
+[build]
+  command = "npm run build"
+  publish = "."
+
+# Production security headers. The strictest CSP lives here (server headers
+# beat <meta> CSP — this one drops the inline allowance the single-file build
+# needs and is used when you split JS out; adjust as you refactor).
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(self)"
+    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
