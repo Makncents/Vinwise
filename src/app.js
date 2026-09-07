@@ -14,7 +14,7 @@ const CONFIG = {
   /* Payment: LIVE Stripe Payment Link (owner-provided 2026-09-04).
      The after-payment redirect must be configured IN STRIPE on this link:
      https://YOURDOMAIN/?vin={client_reference_id}&unlocked=1  */
-  stripePaymentLink: 'https://buy.stripe.com/cNifZigwG492cuNgo99Ve00',
+  stripePaymentLink: 'https://buy.stripe.com/8x2eVe0xIgVObqJgo99Ve01',
   paypalLink: '',                   // e.g. 'https://www.paypal.com/paypalme/you/15.00'
 
   /* Optional: endpoint that POSTs {vin, session_id} to your serverless fn and
