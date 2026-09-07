@@ -348,9 +348,10 @@ async function fetchHistory(state) {
 /* ────────────────────────────── APP STATE ────────────────────────────────── */
 const state = {
   vin: null, vehicle: null, recalls: undefined, miles: null, zip: '30303',
-  comps: null, history: null, ask: null, unlocked: false, decoding: false
+  comps: null, history: null, ask: null, unlocked: false, isPermanentUnlock: false, decoding: false
 };
 const lookupTimes = [];
+const isReportUnlocked = () => state.isPermanentUnlock || state.unlocked;
 
 function isUnlockedFor(vin) {
   try {
@@ -433,7 +434,7 @@ function renderValuation() {
   $('#fmv-result').classList.toggle('hidden', !hasMiles);
   if (!hasMiles) return;
   const { fmv, p25, p75 } = state.comps;
-  $('#fmv-num').textContent = state.unlocked ? money(fmv) : '$••,•••';
+  $('#fmv-num').textContent = isReportUnlocked() ? money(fmv) : '$••,•••';
   $('#fmv-range-label').textContent = `${state.vehicle.year} ${state.vehicle.make} ${state.vehicle.model || ''} ${num(state.miles)} mi · private-party estimate`.replace(/\s+/g, ' ');
   const lo = Math.min(fmv * 0.78, p25 * 0.9), hi = Math.max(fmv * 1.22, p75 * 1.1);
   $('#fmv-lo').textContent = money(lo);
@@ -446,7 +447,7 @@ function renderValuation() {
 
 function renderAskMarker(lo, hi) {
   const m = $('#ask-marker');
-  if (state.ask && state.unlocked) {
+  if (state.ask && isReportUnlocked()) {
     m.classList.remove('hidden');
     m.style.left = (clamp((state.ask - lo) / (hi - lo), 0.02, 0.98) * 100).toFixed(1) + '%';
   } else m.classList.add('hidden');
@@ -454,7 +455,7 @@ function renderAskMarker(lo, hi) {
 
 function renderVerdict(lo, hi) {
   const box = $('#verdict');
-  if (!state.ask || !state.unlocked) {
+  if (!state.ask || !isReportUnlocked()) {
     box.className = 'mt-2 rounded-xl bg-white/5 px-3 py-2 text-[13px] font-semibold text-slate-400';
     box.textContent = 'Enter your asking price to see how you position vs. local sellers.';
     return;
@@ -478,20 +479,20 @@ function renderComps() {
     const tagCls = c.tag === 'Below market' ? 'text-accent-400' : c.tag === 'Above market' ? 'text-amber-400' : 'text-slate-400';
     const row = el('div', { class: 'comp-row ' + (i % 2 ? 'bg-white/[0.03]' : '') },
       el('div', { class: 'min-w-0' },
-        el('p', { class: 'truncate text-[12.5px] font-bold text-slate-100', text: state.unlocked ? c.title : c.title.replace(/[A-Za-z0-9]+/g, m => m[0] + '•'.repeat(Math.max(1, m.length - 1))) }),
-        el('p', { class: 'text-[10px] font-semibold text-slate-400', text: (state.unlocked ? c.seller + ' · ' + c.city : c.seller + ' · •••••') })),
+        el('p', { class: 'truncate text-[12.5px] font-bold text-slate-100', text: isReportUnlocked() ? c.title : c.title.replace(/[A-Za-z0-9]+/g, m => m[0] + '•'.repeat(Math.max(1, m.length - 1))) }),
+        el('p', { class: 'text-[10px] font-semibold text-slate-400', text: (isReportUnlocked() ? c.seller + ' · ' + c.city : c.seller + ' · •••••') })),
       el('span', { class: 'num text-right text-[12px] font-semibold text-slate-300', text: num(c.miles) }),
-      el('span', { class: 'num text-right text-[12px] font-semibold text-slate-300', text: state.unlocked ? c.dist + ' mi' : '••' }),
-      el('span', { class: 'num text-right text-[13px] font-extrabold ' + tagCls, text: state.unlocked ? money(c.price) : '$•,•••' }));
+      el('span', { class: 'num text-right text-[12px] font-semibold text-slate-300', text: isReportUnlocked() ? c.dist + ' mi' : '••' }),
+      el('span', { class: 'num text-right text-[13px] font-extrabold ' + tagCls, text: isReportUnlocked() ? money(c.price) : '$•,•••' }));
     body.append(row);
-    if (!state.unlocked && i >= 1) { /* rows beyond #2 fully masked by gate overlay */ }
+    if (!isReportUnlocked() && i >= 1) { /* rows beyond #2 fully masked by gate overlay */ }
   });
   // provider pill
   const pill = $('#comps-provider');
   if (state.comps.live) { pill.className = 'pill-ok text-[10px]'; pill.textContent = 'LIVE · ' + (state.zip || 'local'); }
   else { pill.className = 'pill-warn text-[10px]'; pill.textContent = 'DEMO DATA'; }
   // gate
-  gate.classList.toggle('hidden', !!state.unlocked);
+  gate.classList.toggle('hidden', !isReportUnlocked());
 }
 
 function renderHistory() {
@@ -502,11 +503,11 @@ function renderHistory() {
   recs.forEach(rec => {
     body.append(el('div', { class: 'hist-tile' },
       el('p', { class: 'spec-k', text: rec.k }),
-      el('p', { class: ('mt-1 text-[13px] font-extrabold ' + (sMap[rec.s] || '')).trim(), text: state.unlocked ? rec.v : '•••••••' }),
-      el('p', { class: 'mt-0.5 text-[10px] font-medium text-slate-400', text: state.unlocked ? rec.note : 'unlocked with report' })));
+      el('p', { class: ('mt-1 text-[13px] font-extrabold ' + (sMap[rec.s] || '')).trim(), text: isReportUnlocked() ? rec.v : '•••••••' }),
+      el('p', { class: 'mt-0.5 text-[10px] font-medium text-slate-400', text: isReportUnlocked() ? rec.note : 'unlocked with report' })));
   });
-  if (!state.unlocked) body.classList.add('lock-blur'); else body.classList.remove('lock-blur');
-  lock.classList.toggle('hidden', !!state.unlocked);
+  if (!isReportUnlocked()) body.classList.add('lock-blur'); else body.classList.remove('lock-blur');
+  lock.classList.toggle('hidden', isReportUnlocked());
   const pill = $('#hist-provider');
   if (state.history && state.history.live) { pill.className = 'pill-ok text-[10px]'; pill.textContent = 'LIVE · NMVTIS-aligned'; }
   else { pill.className = 'pill-warn text-[10px]'; pill.textContent = 'DEMO DATA'; }
@@ -519,10 +520,10 @@ const HISTORY_PLACEHOLDER = [
 ];
 
 function renderSticky() {
-  const show = state.vehicle && !state.unlocked;
+  const show = state.vehicle && !isReportUnlocked();
   $('#sticky-cta').classList.toggle('hidden', !show);
   const fp = $('#free-preview');
-  if (fp) fp.classList.toggle('hidden', !!state.unlocked);
+  if (fp) fp.classList.toggle('hidden', isReportUnlocked());
 }
 
 /* ────────────────────── MARKETPLACE IMAGE GENERATOR ──────────────────────── */
@@ -562,7 +563,7 @@ function drawShareCard() {
 }
 function drawShareCardInner(ctx) {
   const W = 1080, H = 1350, M = 72, IW = W - M * 2;
-  const un = state.unlocked;
+  const un = isReportUnlocked();
   ctx.clearRect(0, 0, W, H);
 
   // background
@@ -665,7 +666,7 @@ function drawShareCardInner(ctx) {
 }
 
 function downloadCard() {
-  if (!state.unlocked) { toast('🔒 Unlock the report to download your card'); openPaywall(); return; }
+  if (!isReportUnlocked()) { toast('🔒 Unlock the report to download your card'); openPaywall(); return; }
   const cv = $('#share-canvas');
   try {
     cv.toBlob(blob => {
@@ -680,7 +681,7 @@ function downloadCard() {
 }
 
 async function shareCard() {
-  if (!state.unlocked) { toast('🔒 Unlock the report to share your card'); openPaywall(); return; }
+  if (!isReportUnlocked()) { toast('🔒 Unlock the report to share your card'); openPaywall(); return; }
   try {
     const blob = await new Promise(res => $('#share-canvas').toBlob(res, 'image/png'));
     const file = new File([blob], `vinwise-${state.vin}.png`, { type: 'image/png' });
@@ -713,6 +714,7 @@ function closePaywall() {
 /* Server-verified unlock (prod) or clearly-labeled demo unlock. */
 async function completeUnlock({ demo = false } = {}) {
   state.unlocked = true;
+  state.isPermanentUnlock = true;
   markUnlocked(state.vin);
   closePaywall();
   renderValuation(); renderComps(); renderHistory(); renderSticky(); drawShareCard();
@@ -765,7 +767,7 @@ async function runSearch(rawVin) {
   const vin = val.vin;
   state.vin = vin; state.decoding = true;
   state.recalls = undefined; state.comps = null; state.history = null;
-  state.miles = null; state.unlocked = state.unlocked || isUnlockedFor(vin);
+  state.miles = null; state.unlocked = state.isPermanentUnlock || state.unlocked || isUnlockedFor(vin);
   setFormLoading(true);
   pushRecent(vin);
   showReport();
@@ -862,7 +864,7 @@ function bindEvents() {
   $('#ask-input').addEventListener('input', e => {
     e.target.value = sanitizeDigits(e.target.value).slice(0, 7);
     state.ask = e.target.value ? +e.target.value : null;
-    if (state.comps && state.unlocked) { renderValuation(); drawShareCard(); }
+    if (state.comps && isReportUnlocked()) { renderValuation(); drawShareCard(); }
   });
   $('#zip-input').addEventListener('input', e => { e.target.value = sanitizeDigits(e.target.value).slice(0, 5); });
   $('#zip-input').addEventListener('change', async e => {
@@ -958,7 +960,10 @@ function init() {
   if (sampleTag) sampleTag.classList.toggle('hidden', !CONFIG.reviewsAreSamples);
   if (sampleNote) sampleNote.classList.toggle('hidden', !CONFIG.reviewsAreSamples);
   const q = new URLSearchParams(location.search);
-  if (hasUnlockSignal(q)) state.unlocked = true;
+  if (hasUnlockSignal(q)) {
+    state.isPermanentUnlock = true;
+    state.unlocked = true;
+  }
   if (q.get('vin') || hasUnlockSignal(q)) handleReturnUrl();
 }
 document.addEventListener('DOMContentLoaded', init);
