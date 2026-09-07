@@ -919,6 +919,11 @@ async function copyText(t) {
 }
 
 /* ──────────────────────────────── INIT ───────────────────────────────────── */
+function hasUnlockSignal(query) {
+  const unlocked = (query.get('unlocked') || '').toLowerCase();
+  return unlocked === '1' || unlocked === 'true' || /\/unlocked=true\/?$/i.test(location.pathname);
+}
+
 async function handleReturnUrl() {
   const q = new URLSearchParams(location.search);
   // Stripe forwards client_reference_id verbatim; we send "VIN.token" so the
@@ -926,13 +931,13 @@ async function handleReturnUrl() {
   const rawVinParam = (q.get('vin') || '').trim();
   const [rawVinPart, embeddedToken] = rawVinParam.split('.');
   const vin = sanitizeVin(rawVinPart || '').slice(0, 17);
-  const unlocked = q.get('unlocked');
+  const unlockSignal = hasUnlockSignal(q);
   const t = sanitizeToken(q.get('t') || embeddedToken || '');
   const sid = q.get('session_id');
   if (!VIN_RE.test(vin)) return;
   $('#vin-input').value = vin; updateVinCounter();
   await runSearch(vin);
-  if (unlocked === '1') {
+  if (unlockSignal) {
     const okToken = t === tokenFor(vin);
     if (okToken) { completeUnlock(); return; }
     const verified = await tryServerVerify(sid);
@@ -951,6 +956,7 @@ function init() {
   const sampleTag = $('#reviews-sample-tag'), sampleNote = $('#reviews-sample-note');
   if (sampleTag) sampleTag.classList.toggle('hidden', !CONFIG.reviewsAreSamples);
   if (sampleNote) sampleNote.classList.toggle('hidden', !CONFIG.reviewsAreSamples);
-  if (new URLSearchParams(location.search).get('vin')) handleReturnUrl();
+  const q = new URLSearchParams(location.search);
+  if (q.get('vin') || hasUnlockSignal(q)) handleReturnUrl();
 }
 document.addEventListener('DOMContentLoaded', init);
