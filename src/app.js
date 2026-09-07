@@ -765,7 +765,7 @@ async function runSearch(rawVin) {
   const vin = val.vin;
   state.vin = vin; state.decoding = true;
   state.recalls = undefined; state.comps = null; state.history = null;
-  state.miles = null; state.unlocked = isUnlockedFor(vin);
+  state.miles = null; state.unlocked = state.unlocked || isUnlockedFor(vin);
   setFormLoading(true);
   pushRecent(vin);
   showReport();
@@ -958,6 +958,7 @@ function init() {
   if (sampleTag) sampleTag.classList.toggle('hidden', !CONFIG.reviewsAreSamples);
   if (sampleNote) sampleNote.classList.toggle('hidden', !CONFIG.reviewsAreSamples);
   const q = new URLSearchParams(location.search);
+  if (hasUnlockSignal(q)) state.unlocked = true;
   if (q.get('vin') || hasUnlockSignal(q)) handleReturnUrl();
 }
 document.addEventListener('DOMContentLoaded', init);
