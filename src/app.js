@@ -712,6 +712,7 @@ function closePaywall() {
 
 /* Server-verified unlock (prod) or clearly-labeled demo unlock. */
 async function completeUnlock({ demo = false } = {}) {
+  state.unlocked = true;
   markUnlocked(state.vin);
   closePaywall();
   renderValuation(); renderComps(); renderHistory(); renderSticky(); drawShareCard();
